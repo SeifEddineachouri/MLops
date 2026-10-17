@@ -1,13 +1,8 @@
-from pathlib import Path
-import sys
-
 import pandas as pd
 import pytest
 from mlflow.tracking import MlflowClient
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from train import (  # noqa: E402
+from src.train import (
     build_pipeline,
     load_config,
     load_dataset,
@@ -87,6 +82,6 @@ def test_training_logs_metrics_parameters_and_model(tmp_path):
     assert runs[0].data.params["dataset"] == "Breast Cancer Wisconsin (scikit-learn)"
     logged_models = client.search_logged_models(
         [experiment.experiment_id],
-        filter_string=f"source_run_id = '{runs[0].info.run_id}'"
+        filter_string=f"source_run_id = '{runs[0].info.run_id}'",
     )
     assert len(logged_models) == 1
