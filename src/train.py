@@ -1,8 +1,11 @@
 """Chargement, validation et entraînement du modèle de classification."""
 
+import os
 from typing import Any
 from pathlib import Path
 
+import mlflow
+import mlflow.sklearn
 import yaml
 
 from sklearn.datasets import load_breast_cancer
@@ -91,12 +94,45 @@ def train_and_evaluate(X_train, X_test, y_train, y_test, config: dict[str, Any])
     return pipeline, metrics
 
 
-if __name__ == "__main__":
-    config = load_config()
+def run_training(config_path: str | Path = "config/config.yaml") -> dict[str, float]:
+    """Exécute un entraînement complet et l'enregistre dans MLflow."""
+    config = load_config(config_path)
+
+    tracking_uri = config["mlflow"]["tracking_uri"]
+    if tracking_uri.startswith("file:"):
+        os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment(config["mlflow"]["experiment_name"])
+
     X, y = load_dataset()
     validate_dataset(X, y)
-    print(f"Dimensions des variables : {X.shape}")
-    print(f"Classes présentes : {sorted(y.unique())}")
     X_train, X_test, y_train, y_test = split_data(X, y, config)
-    _, metrics = train_and_evaluate(X_train, X_test, y_train, y_test, config)
-    print(f"Métriques : {metrics}")
+
+    with mlflow.start_run():
+        mlflow.log_params(
+            {
+                "seed": config["seed"],
+                "test_size": config["data"]["test_size"],
+                "C": config["model"]["C"],
+                "max_iter": config["model"]["max_iter"],
+                "dataset": "Breast Cancer Wisconsin (scikit-learn)",
+            }
+        )
+
+        pipeline, metrics = train_and_evaluate(
+            X_train, X_test, y_train, y_test, config
+        )
+
+        mlflow.log_metrics(metrics)
+        mlflow.sklearn.log_model(
+            pipeline,
+            artifact_path="model",
+            serialization_format="cloudpickle",
+        )
+        print("Métriques :", metrics)
+
+    return metrics
+
+
+if __name__ == "__main__":
+    run_training()

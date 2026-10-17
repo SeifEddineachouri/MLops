@@ -3,6 +3,7 @@ import sys
 
 import pandas as pd
 import pytest
+from mlflow.tracking import MlflowClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -10,6 +11,7 @@ from train import (  # noqa: E402
     build_pipeline,
     load_config,
     load_dataset,
+    run_training,
     split_data,
     train_and_evaluate,
     validate_dataset,
@@ -53,3 +55,38 @@ def test_validation_rejects_missing_values():
 
     with pytest.raises(ValueError, match="manquantes"):
         validate_dataset(X, y)
+
+
+def test_training_logs_metrics_parameters_and_model(tmp_path):
+    tracking_path = (tmp_path / "mlruns").resolve()
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "seed: 42",
+                "data:",
+                "  test_size: 0.2",
+                "model:",
+                "  C: 1.0",
+                "  max_iter: 1000",
+                "mlflow:",
+                "  experiment_name: test-mlflow",
+                f"  tracking_uri: file:{tracking_path.as_posix()}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    metrics = run_training(config_path)
+    client = MlflowClient(tracking_uri=f"file:{tracking_path.as_posix()}")
+    experiment = client.get_experiment_by_name("test-mlflow")
+    runs = client.search_runs([experiment.experiment_id])
+
+    assert len(runs) == 1
+    assert runs[0].data.metrics["accuracy"] == metrics["accuracy"]
+    assert runs[0].data.params["dataset"] == "Breast Cancer Wisconsin (scikit-learn)"
+    logged_models = client.search_logged_models(
+        [experiment.experiment_id],
+        filter_string=f"source_run_id = '{runs[0].info.run_id}'"
+    )
+    assert len(logged_models) == 1

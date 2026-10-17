@@ -16,3 +16,16 @@ mlops-tp/
 ├── requirements.txt
 └── README.md
 ```
+
+## Entraînement et suivi MLflow
+
+Depuis la racine du dépôt :
+
+```powershell
+$env:PYTHONPATH = "src"
+python src/train.py
+mlflow ui --backend-store-uri ./mlruns
+```
+
+Chaque exécution enregistre les paramètres, les métriques et le modèle
+scikit-learn dans l'expérience `tp-mlops-classification`.
