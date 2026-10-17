@@ -1,6 +1,9 @@
 """Chargement, validation et entraînement du modèle de classification."""
 
 from typing import Any
+from pathlib import Path
+
+import yaml
 
 from sklearn.datasets import load_breast_cancer
 from sklearn.impute import SimpleImputer
@@ -9,6 +12,15 @@ from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+
+
+def load_config(path: str | Path = "config/config.yaml") -> dict[str, Any]:
+    """Charge la configuration YAML depuis la racine du dépôt."""
+    with Path(path).open("r", encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file)
+    if not isinstance(config, dict):
+        raise ValueError("La configuration doit contenir un objet YAML.")
+    return config
 
 
 def load_dataset():
@@ -80,7 +92,11 @@ def train_and_evaluate(X_train, X_test, y_train, y_test, config: dict[str, Any])
 
 
 if __name__ == "__main__":
+    config = load_config()
     X, y = load_dataset()
     validate_dataset(X, y)
     print(f"Dimensions des variables : {X.shape}")
     print(f"Classes présentes : {sorted(y.unique())}")
+    X_train, X_test, y_train, y_test = split_data(X, y, config)
+    _, metrics = train_and_evaluate(X_train, X_test, y_train, y_test, config)
+    print(f"Métriques : {metrics}")

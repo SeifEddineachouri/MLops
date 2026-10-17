@@ -6,3 +6,7 @@ data:
 model:
   C: 1.0
   max_iter: 1000
+
+mlflow:
+  experiment_name: tp-mlops-classification
+  tracking_uri: file:./mlruns

@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from train import (  # noqa: E402
     build_pipeline,
+    load_config,
     load_dataset,
     split_data,
     train_and_evaluate,
@@ -16,6 +17,15 @@ from train import (  # noqa: E402
 
 
 CONFIG = {"seed": 42, "data": {"test_size": 0.2}, "model": {"C": 1.0, "max_iter": 1000}}
+
+
+def test_config_is_loaded_from_yaml():
+    config = load_config("config/config.yaml")
+
+    assert config["seed"] == 42
+    assert config["data"]["test_size"] == 0.2
+    assert config["model"]["C"] == 1.0
+    assert config["mlflow"]["experiment_name"] == "tp-mlops-classification"
 
 
 def test_dataset_is_loaded_and_validated():
